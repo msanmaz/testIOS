@@ -7,21 +7,22 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var appState: AppState // Observe AppState
-
+    @EnvironmentObject private var authService: AuthenticationService
+    
     var body: some View {
         Group {
-            if appState.isLoggedIn {
-                MainTabView() // Show MainTabView after login
+            if authService.isAuthenticated {
+                MainTabView()
             } else {
-                LoginView(viewModel: LoginViewModel()) // Inject the LoginViewModel
+                LoginView()
             }
         }
     }
 }
 
-
-
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .environmentObject(AuthenticationService())
+    }
 }

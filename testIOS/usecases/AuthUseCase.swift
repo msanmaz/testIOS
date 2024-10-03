@@ -12,7 +12,7 @@ protocol AuthUseCaseProtocol {
     func login(email: String, password: String) -> AnyPublisher<AuthResponse, Error>
     func createUser(email: String, password: String, username: String) -> AnyPublisher<AuthResponse, Error>
     func verifyToken() -> AnyPublisher<AuthResponse, Error>
-    func logout() -> AnyPublisher<AuthResponse, Error>
+    func logout() -> AnyPublisher<LogoutResponse, Error>
 }
 
 class AuthUseCase: AuthUseCaseProtocol {
@@ -34,7 +34,7 @@ class AuthUseCase: AuthUseCaseProtocol {
         return repository.verifyToken()
     }
     
-    func logout() -> AnyPublisher<AuthResponse, Error> {
+    func logout() -> AnyPublisher<LogoutResponse, Error> {
         return repository.logout()
     }
 }

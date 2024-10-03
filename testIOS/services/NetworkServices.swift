@@ -121,16 +121,16 @@ class NetworkService {
         return request(endpoint)
     }
     
-    func logout() -> AnyPublisher<AuthResponse, Error> {
-        let endpoint = Endpoint.logout()
-        return request(endpoint)
-            .handleEvents(receiveOutput: { [weak self] response in
-                if response.success {
-                    self?.clearToken()
-                }
-            })
-            .eraseToAnyPublisher()
-    }
+    func logout() -> AnyPublisher<LogoutResponse, Error> {
+          let endpoint = Endpoint.logout()
+          return request(endpoint)
+              .handleEvents(receiveOutput: { [weak self] response in
+                  if response.success {
+                      self?.clearToken()
+                  }
+              })
+              .eraseToAnyPublisher()
+      }
 }
 
 enum HTTPMethod: String {
@@ -176,7 +176,7 @@ extension Endpoint {
     
     static func logout() -> Endpoint {
         return Endpoint(
-            path: "/logout",
+            path: "/api/auth/logout",
             method: .get,
             headers: nil,
             body: nil

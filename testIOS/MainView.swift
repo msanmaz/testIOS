@@ -9,21 +9,13 @@ import SwiftUI
 
 @main
 struct testIOSApp: App {
-    @StateObject var appState = AppState()
-
+    @StateObject private var authService = AuthenticationService()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(appState) // Inject AppState globally
+                .environmentObject(authService)
         }
     }
 }
 
-
-
-
-
-
-class AppState: ObservableObject {
-    @Published var isLoggedIn: Bool = false
-}

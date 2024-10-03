@@ -15,83 +15,49 @@ class LoginViewModel: ObservableObject {
     @Published var showAlert: Bool = false
     @Published var alertMessage: String = ""
     @Published var isLoading: Bool = false
-    @Published var isLoggedIn: Bool = false
 
-    private let authUseCase: AuthUseCaseProtocol
     private var cancellables = Set<AnyCancellable>()
 
-    init(authUseCase: AuthUseCaseProtocol = AuthUseCase()) {
-        self.authUseCase = authUseCase
-    }
-
-    func login() {
+    func login(authService: AuthenticationService) {
         isLoading = true
-        authUseCase.login(email: email, password: password)
+        authService.login(email: email, password: password)
             .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { [weak self] completion in
+            .sink { [weak self] completion in
                 self?.isLoading = false
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let error):
+                if case .failure(let error) = completion {
                     self?.handleError(error)
                 }
-            }, receiveValue: { [weak self] response in
-                self?.handleSuccessfulAuth(response)
-            })
+            } receiveValue: { [weak self] success in
+                if !success {
+                    self?.alertMessage = "Login failed. Please try again."
+                    self?.showAlert = true
+                }
+            }
             .store(in: &cancellables)
     }
 
-    func createAccount() {
+    func createAccount(authService: AuthenticationService) {
         isLoading = true
-        authUseCase.createUser(email: email, password: password, username: username)
+        authService.createUser(email: email, password: password, username: username)
             .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { [weak self] completion in
+            .sink { [weak self] completion in
                 self?.isLoading = false
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let error):
+                if case .failure(let error) = completion {
                     self?.handleError(error)
                 }
-            }, receiveValue: { [weak self] response in
-                self?.handleSuccessfulAuth(response)
-            })
-            .store(in: &cancellables)
-    }
-
-    func logout() {
-        isLoading = true
-        authUseCase.logout()
-            .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { [weak self] completion in
-                self?.isLoading = false
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let error):
-                    self?.handleError(error)
+            } receiveValue: { [weak self] success in
+                if success {
+                    self?.login(authService: authService) // Automatically log in after successful account creation
+                } else {
+                    self?.alertMessage = "Account creation failed. Please try again."
+                    self?.showAlert = true
                 }
-            }, receiveValue: { [weak self] _ in
-                self?.isLoggedIn = false
-                // Clear any stored user data here
-            })
+            }
             .store(in: &cancellables)
-    }
-
-    private func handleSuccessfulAuth(_ response: AuthResponse) {
-        if response.success {
-            isLoggedIn = true
-            // Store the token securely here (e.g., in Keychain)
-            // You might want to create a separate TokenManager for this
-            alertMessage = "Authentication successful!"
-        } else {
-            alertMessage = response.message ?? "Authentication failed."
-        }
-        showAlert = true
     }
 
     private func handleError(_ error: Error) {
+        isLoading = false
         if let networkError = error as? NetworkError {
             switch networkError {
             case .unauthorized:

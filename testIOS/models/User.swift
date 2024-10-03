@@ -32,3 +32,8 @@ struct AuthResponse: Codable {
         case success, token, user, message
     }
 }
+
+struct LogoutResponse: Codable {
+    let success: Bool
+    let message: String
+}

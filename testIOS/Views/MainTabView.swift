@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject private var authService: AuthenticationService
+    
     var body: some View {
         TabView {
             HomeView()
@@ -28,6 +30,9 @@ struct MainTabView: View {
     }
 }
 
-#Preview {
-    MainTabView()
+struct MainTabView_Previews: PreviewProvider {
+    static var previews: some View {
+        MainTabView()
+            .environmentObject(AuthenticationService())
+    }
 }

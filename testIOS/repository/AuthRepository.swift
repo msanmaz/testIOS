@@ -12,7 +12,7 @@ protocol AuthRepositoryProtocol {
     func login(email: String, password: String) -> AnyPublisher<AuthResponse, Error>
     func createUser(email: String, password: String, username: String) -> AnyPublisher<AuthResponse, Error>
     func verifyToken() -> AnyPublisher<AuthResponse, Error>
-    func logout() -> AnyPublisher<AuthResponse, Error>
+    func logout() -> AnyPublisher<LogoutResponse, Error>
 }
 
 class AuthRepository: AuthRepositoryProtocol {
@@ -34,7 +34,7 @@ class AuthRepository: AuthRepositoryProtocol {
         return networkService.verifyToken()
     }
     
-    func logout() -> AnyPublisher<AuthResponse, Error> {
-        return networkService.logout()
-    }
+    func logout() -> AnyPublisher<LogoutResponse, Error> {
+           return networkService.logout()
+       }
 }
