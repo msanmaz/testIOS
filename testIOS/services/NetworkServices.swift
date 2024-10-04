@@ -7,34 +7,60 @@
 import Foundation
 import Combine
 
-enum NetworkError: Error {
+enum NetworkError: Error, LocalizedError {
     case invalidURL
     case noData
     case decodingError(String)
     case serverError(String)
     case unauthorized
+    case badRequest(String)
+    case notFound
+    case unknown(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid URL"
+        case .noData:
+            return "No data received"
+        case .decodingError(let message):
+            return "Decoding error: \(message)"
+        case .serverError(let message):
+            return "Server error: \(message)"
+        case .unauthorized:
+            return "Unauthorized access"
+        case .badRequest(let message):
+            return "Bad request: \(message)"
+        case .notFound:
+            return "Resource not found"
+        case .unknown(let message):
+            return "Unknown error: \(message)"
+        }
+    }
 }
 
-class NetworkService {
+protocol NetworkServiceProtocol {
+    func request<T: Codable>(_ endpoint: Endpoint) -> AnyPublisher<T, Error>
+    func fetchYachts() -> AnyPublisher<[Yacht], Error>
+}
+
+class NetworkService: NetworkServiceProtocol {
     static let shared = NetworkService()
-    private init() {}
-    
     private let baseURL = "http://192.168.0.122:3000"
-    private var token: String?
+    private let session: URLSession
+    
+    private init() {
+        let configuration = URLSessionConfiguration.default
+        configuration.httpShouldSetCookies = true
+        configuration.httpCookieAcceptPolicy = .always
+        self.session = URLSession(configuration: configuration)
+    }
     
     private let jsonDecoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return decoder
     }()
-    
-    func setToken(_ token: String) {
-        self.token = token
-    }
-    
-    func clearToken() {
-        self.token = nil
-    }
     
     func request<T: Codable>(_ endpoint: Endpoint) -> AnyPublisher<T, Error> {
         guard let url = URL(string: baseURL + endpoint.path) else {
@@ -45,93 +71,75 @@ class NetworkService {
         request.httpMethod = endpoint.method.rawValue
         request.allHTTPHeaderFields = endpoint.headers
         
-        if let token = token {
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        
         if let body = endpoint.body {
             request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         }
         
-        return URLSession.shared.dataTaskPublisher(for: request)
+        return session.dataTaskPublisher(for: request)
             .tryMap { data, response -> Data in
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    throw NetworkError.serverError("Invalid response")
+                    throw NetworkError.unknown("Invalid response")
                 }
                 
                 switch httpResponse.statusCode {
                 case 200...299:
                     return data
+                case 400:
+                    throw self.handleBadRequest(data)
                 case 401:
                     throw NetworkError.unauthorized
+                case 404:
+                    throw NetworkError.notFound
+                case 500...599:
+                    throw self.handleServerError(data)
                 default:
-                    throw NetworkError.serverError("Status code: \(httpResponse.statusCode)")
+                    throw NetworkError.unknown("Unexpected status code: \(httpResponse.statusCode)")
                 }
             }
             .decode(type: T.self, decoder: jsonDecoder)
             .mapError { error -> Error in
-                           if let decodingError = error as? DecodingError {
-                               print("Decoding error: \(decodingError)")
-                               switch decodingError {
-                               case .keyNotFound(let key, let context):
-                                   return NetworkError.decodingError("Key '\(key.stringValue)' not found: \(context.debugDescription)")
-                               case .typeMismatch(let type, let context):
-                                   return NetworkError.decodingError("Type '\(type)' mismatch: \(context.debugDescription)")
-                               case .valueNotFound(let type, let context):
-                                   return NetworkError.decodingError("Value of type '\(type)' not found: \(context.debugDescription)")
-                               case .dataCorrupted(let context):
-                                   return NetworkError.decodingError("Data corrupted: \(context.debugDescription)")
-                               @unknown default:
-                                   return NetworkError.decodingError("Unknown decoding error")
-                               }
-                           } else if let networkError = error as? NetworkError {
-                               return networkError
-                           } else {
-                               return NetworkError.serverError(error.localizedDescription)
-                           }
-                       }
-                       .eraseToAnyPublisher()
-    }
-    
-    func login(email: String, password: String) -> AnyPublisher<AuthResponse, Error> {
-        let endpoint = Endpoint.login(email: email, password: password)
-        return request(endpoint)
-            .handleEvents(receiveOutput: { [weak self] response in
-                if response.success{
-                    self?.setToken(response.token)
-                    UserDefaultsManager.shared.saveUser(response.user, token: response.token)
+                if let networkError = error as? NetworkError {
+                    return networkError
+                } else if let decodingError = error as? DecodingError {
+                    return NetworkError.decodingError(decodingError.localizedDescription)
+                } else {
+                    return NetworkError.unknown(error.localizedDescription)
                 }
-            })
+            }
             .eraseToAnyPublisher()
     }
     
-    func createUser(email: String, password: String, username: String) -> AnyPublisher<AuthResponse, Error> {
-        let endpoint = Endpoint.createUser(email: email, password: password, username: username)
-        return request(endpoint)
-            .handleEvents(receiveOutput: { [weak self] response in
-                if response.success {
-                    self?.setToken(response.token)
-                }
-            })
-            .eraseToAnyPublisher()
+    private func handleBadRequest(_ data: Data) -> NetworkError {
+        if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+            return .badRequest(errorResponse.message)
+        } else {
+            return .badRequest("Invalid request")
+        }
     }
     
-    func verifyToken() -> AnyPublisher<AuthResponse, Error> {
-        let endpoint = Endpoint.verifyToken()
-        return request(endpoint)
+    private func handleServerError(_ data: Data) -> NetworkError {
+        if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+            return .serverError(errorResponse.message)
+        } else {
+            return .serverError("An unexpected server error occurred")
+        }
     }
     
-    func logout() -> AnyPublisher<LogoutResponse, Error> {
-          let endpoint = Endpoint.logout()
-          return request(endpoint)
-              .handleEvents(receiveOutput: { [weak self] response in
-                  if response.success {
-                      self?.clearToken()
-                  }
-              })
-              .eraseToAnyPublisher()
-      }
+    func fetchYachts() -> AnyPublisher<[Yacht], Error> {
+        let endpoint = Endpoint(
+            path: "/api/public/yatchs",
+            method: .get,
+            headers: nil,
+            body: nil
+        )
+        return request(endpoint)
+    }
 }
+
+struct ErrorResponse: Codable {
+    let message: String
+}
+
 
 enum HTTPMethod: String {
     case get = "GET"
@@ -156,6 +164,7 @@ extension Endpoint {
         )
     }
     
+    
     static func createUser(email: String, password: String, username: String) -> Endpoint {
         return Endpoint(
             path: "/api/auth/create-user",
@@ -167,7 +176,7 @@ extension Endpoint {
     
     static func verifyToken() -> Endpoint {
         return Endpoint(
-            path: "api/auth/verify-token",
+            path: "/api/auth/verify-token",
             method: .get,
             headers: nil,
             body: nil

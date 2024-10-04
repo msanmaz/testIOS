@@ -8,34 +8,25 @@ import Foundation
 import Combine
 
 class AuthenticationService: ObservableObject {
-    @Published private(set) var isAuthenticated: Bool = false
+    @Published private(set) var isAuthenticated: Bool
     @Published private(set) var currentUser: User?
     
     private var cancellables = Set<AnyCancellable>()
-    private let authUseCase: AuthUseCaseProtocol
+    private let authRepository: AuthRepositoryProtocol
     
-    init(authUseCase: AuthUseCaseProtocol = AuthUseCase()) {
-        self.authUseCase = authUseCase
-        checkInitialAuthState()
-    }
-    
-    private func checkInitialAuthState() {
-        DispatchQueue.main.async { [weak self] in
-            if let user = UserDefaultsManager.shared.getUser(), UserDefaultsManager.shared.isUserLoggedIn() {
-                self?.isAuthenticated = true
-                self?.currentUser = user
-            }
-        }
+    init(authRepository: AuthRepositoryProtocol = AuthRepository()) {
+        self.authRepository = authRepository
+        self.isAuthenticated = authRepository.isUserLoggedIn()
+        self.currentUser = authRepository.getCachedUser()
     }
     
     func login(email: String, password: String) -> AnyPublisher<Bool, Error> {
-        authUseCase.login(email: email, password: password)
+        authRepository.login(email: email, password: password)
             .receive(on: DispatchQueue.main)
             .handleEvents(receiveOutput: { [weak self] response in
                 self?.isAuthenticated = response.success
                 if response.success {
                     self?.currentUser = response.user
-                    UserDefaultsManager.shared.saveUser(response.user, token: response.token)
                 }
             })
             .map(\.success)
@@ -43,12 +34,12 @@ class AuthenticationService: ObservableObject {
     }
     
     func createUser(email: String, password: String, username: String) -> AnyPublisher<Bool, Error> {
-        authUseCase.createUser(email: email, password: password, username: username)
+        authRepository.createUser(email: email, password: password, username: username)
             .receive(on: DispatchQueue.main)
             .handleEvents(receiveOutput: { [weak self] response in
                 if response.success {
                     self?.currentUser = response.user
-                    UserDefaultsManager.shared.saveUser(response.user, token: response.token)
+                    self?.isAuthenticated = true
                 }
             })
             .map(\.success)
@@ -56,7 +47,7 @@ class AuthenticationService: ObservableObject {
     }
     
     func logout() {
-        authUseCase.logout()
+        authRepository.logout()
             .receive(on: DispatchQueue.main)
             .sink { completion in
                 if case .failure(let error) = completion {
@@ -65,7 +56,23 @@ class AuthenticationService: ObservableObject {
             } receiveValue: { [weak self] _ in
                 self?.isAuthenticated = false
                 self?.currentUser = nil
-                UserDefaultsManager.shared.clearUserData()
+            }
+            .store(in: &cancellables)
+    }
+    
+    func verifyToken() {
+        authRepository.verifyToken()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                if case .failure(_) = completion {
+                    self?.isAuthenticated = false
+                    self?.currentUser = nil
+                }
+            } receiveValue: { [weak self] response in
+                self?.isAuthenticated = response.success
+                if response.success {
+                    self?.currentUser = response.user
+                }
             }
             .store(in: &cancellables)
     }

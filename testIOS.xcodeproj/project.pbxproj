@@ -27,6 +27,9 @@
 		41EC65D32CAF15E30044476A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EC65D22CAF15E30044476A /* SettingsView.swift */; };
 		41EC65D52CAF4B470044476A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EC65D42CAF4B470044476A /* SettingsViewModel.swift */; };
 		41EC65D72CAF57520044476A /* AuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EC65D62CAF57510044476A /* AuthenticationService.swift */; };
+		41EC65DB2CAF71260044476A /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EC65DA2CAF71260044476A /* HomeViewModel.swift */; };
+		41EC65DD2CAF71E80044476A /* Yacht.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EC65DC2CAF71E80044476A /* Yacht.swift */; };
+		41EC65DF2CAF72610044476A /* YachtRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EC65DE2CAF72610044476A /* YachtRepository.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +73,9 @@
 		41EC65D22CAF15E30044476A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		41EC65D42CAF4B470044476A /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		41EC65D62CAF57510044476A /* AuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationService.swift; sourceTree = "<group>"; };
+		41EC65DA2CAF71260044476A /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
+		41EC65DC2CAF71E80044476A /* Yacht.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Yacht.swift; sourceTree = "<group>"; };
+		41EC65DE2CAF72610044476A /* YachtRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YachtRepository.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +182,7 @@
 			isa = PBXGroup;
 			children = (
 				41EC65BA2CAEFE8F0044476A /* AuthRepository.swift */,
+				41EC65DE2CAF72610044476A /* YachtRepository.swift */,
 			);
 			path = repository;
 			sourceTree = "<group>";
@@ -202,6 +209,7 @@
 			children = (
 				41EC65C32CAEFEEE0044476A /* LoginViewModel.swift */,
 				41EC65D42CAF4B470044476A /* SettingsViewModel.swift */,
+				41EC65DA2CAF71260044476A /* HomeViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -210,6 +218,7 @@
 			isa = PBXGroup;
 			children = (
 				41EC65C62CAEFF1D0044476A /* User.swift */,
+				41EC65DC2CAF71E80044476A /* Yacht.swift */,
 			);
 			path = models;
 			sourceTree = "<group>";
@@ -352,9 +361,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				41EC65DD2CAF71E80044476A /* Yacht.swift in Sources */,
 				41EC65BE2CAEFEA80044476A /* NetworkServices.swift in Sources */,
 				41EC65C12CAEFECC0044476A /* AuthUseCase.swift in Sources */,
+				41EC65DF2CAF72610044476A /* YachtRepository.swift in Sources */,
 				41EC65B82CAEFAFD0044476A /* LoginView.swift in Sources */,
+				41EC65DB2CAF71260044476A /* HomeViewModel.swift in Sources */,
 				41EC65CD2CAF15A90044476A /* HomeView.swift in Sources */,
 				41EC65D12CAF15D50044476A /* ProfileView.swift in Sources */,
 				41EC65BB2CAEFE8F0044476A /* AuthRepository.swift in Sources */,

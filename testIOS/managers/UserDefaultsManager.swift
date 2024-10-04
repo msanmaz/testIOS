@@ -6,24 +6,20 @@
 //
 import Foundation
 
-// MARK: - Keys for UserDefaults storage
-enum UserDefaultsKeys: String {
+enum UserDefaultsKeys: String, CaseIterable {
     case userId = "userId"
     case userEmail = "userEmail"
     case userName = "userName"
-    case authToken = "authToken"
     case userCreatedAt = "userCreatedAt"
     case userUpdatedAt = "userUpdatedAt"
 }
 
-// MARK: - UserDefaultsEngine Protocol
 protocol UserDefaultsEngine {
     func set(_ value: Any?, forKey key: UserDefaultsKeys)
     func object(forKey key: UserDefaultsKeys) -> Any?
     func removeObject(forKey key: UserDefaultsKeys)
 }
 
-// MARK: - UserDefaultsEngine conformance for UserDefaults
 extension UserDefaults: UserDefaultsEngine {
     func set(_ value: Any?, forKey key: UserDefaultsKeys) {
         set(value, forKey: key.rawValue)
@@ -38,7 +34,6 @@ extension UserDefaults: UserDefaultsEngine {
     }
 }
 
-// MARK: - UserDefaultsManager
 class UserDefaultsManager {
     static let shared = UserDefaultsManager()
     private let defaults: UserDefaultsEngine
@@ -47,19 +42,12 @@ class UserDefaultsManager {
         self.defaults = defaults
     }
     
-    func saveUser(_ user: User, token: String) {
+    func saveUser(_ user: User) {
         defaults.set(user.id, forKey: .userId)
         defaults.set(user.email, forKey: .userEmail)
         defaults.set(user.name, forKey: .userName)
         defaults.set(user.createdAt, forKey: .userCreatedAt)
         defaults.set(user.updatedAt, forKey: .userUpdatedAt)
-        defaults.set(token, forKey: .authToken)
-    }
-    
-    var isLoggedIn: Bool {
-        get {
-            return getUser() != nil && getToken() != nil
-        }
     }
     
     func getUser() -> User? {
@@ -73,18 +61,7 @@ class UserDefaultsManager {
         return User(id: id, email: email, name: name, createdAt: createdAt, updatedAt: updatedAt)
     }
     
-    func getToken() -> String? {
-        return defaults.object(forKey: .authToken) as? String
-    }
-    
     func clearUserData() {
         UserDefaultsKeys.allCases.forEach { defaults.removeObject(forKey: $0) }
     }
-    
-    func isUserLoggedIn() -> Bool {
-        return getUser() != nil && getToken() != nil
-    }
 }
-
-// MARK: - Make UserDefaultsKeys conform to CaseIterable
-extension UserDefaultsKeys: CaseIterable {}

@@ -13,28 +13,62 @@ protocol AuthRepositoryProtocol {
     func createUser(email: String, password: String, username: String) -> AnyPublisher<AuthResponse, Error>
     func verifyToken() -> AnyPublisher<AuthResponse, Error>
     func logout() -> AnyPublisher<LogoutResponse, Error>
+    func getCachedUser() -> User?
+    func isUserLoggedIn() -> Bool
 }
 
 class AuthRepository: AuthRepositoryProtocol {
-    private let networkService: NetworkService
     
-    init(networkService: NetworkService = .shared) {
+    private let networkService: NetworkServiceProtocol
+    private let userDefaultsManager: UserDefaultsManager
+    
+    init(networkService: NetworkServiceProtocol = NetworkService.shared,
+         userDefaultsManager: UserDefaultsManager = .shared) {
         self.networkService = networkService
+        self.userDefaultsManager = userDefaultsManager
     }
     
     func login(email: String, password: String) -> AnyPublisher<AuthResponse, Error> {
-        return networkService.login(email: email, password: password)
+        let endpoint = Endpoint.login(email: email, password: password)
+        return networkService.request(endpoint)
+            .handleEvents(receiveOutput: { [weak self] response in
+                if response.success {
+                    self?.userDefaultsManager.saveUser(response.user)
+                }
+            })
+            .eraseToAnyPublisher()
     }
     
     func createUser(email: String, password: String, username: String) -> AnyPublisher<AuthResponse, Error> {
-        return networkService.createUser(email: email, password: password, username: username)
+        let endpoint = Endpoint.createUser(email: email, password: password, username: username)
+        return networkService.request(endpoint)
+            .handleEvents(receiveOutput: { [weak self] response in
+                if response.success {
+                    self?.userDefaultsManager.saveUser(response.user)
+                }
+            })
+            .eraseToAnyPublisher()
     }
     
     func verifyToken() -> AnyPublisher<AuthResponse, Error> {
-        return networkService.verifyToken()
+        let endpoint = Endpoint.verifyToken()
+        return networkService.request(endpoint)
     }
     
     func logout() -> AnyPublisher<LogoutResponse, Error> {
-           return networkService.logout()
-       }
+        let endpoint = Endpoint.logout()
+        return networkService.request(endpoint)
+            .handleEvents(receiveOutput: { [weak self] _ in
+                self?.userDefaultsManager.clearUserData()
+            })
+            .eraseToAnyPublisher()
+    }
+    
+    func getCachedUser() -> User? {
+        return userDefaultsManager.getUser()
+    }
+    
+    func isUserLoggedIn() -> Bool {
+        return userDefaultsManager.getUser() != nil
+    }
 }
